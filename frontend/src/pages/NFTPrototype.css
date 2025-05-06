@@ -1,0 +1,169 @@
+/* NFT原型页面样式 */
+
+.nft-platform {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: 'Arial', sans-serif;
+}
+
+/* 顶部导航栏 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #2a2a72;
+  color: white;
+}
+
+.connect-wallet {
+  background-color: #4c43cd;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.connect-wallet:hover {
+  background-color: #3832a8;
+}
+
+/* 主要内容区 */
+.main-content {
+  display: flex;
+  flex: 1;
+  background-color: #f5f5f5;
+}
+
+/* 侧边栏 */
+.sidebar {
+  width: 200px;
+  background-color: #ffffff;
+  padding: 1rem 0;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.sidebar li:hover {
+  background-color: #f0f0f0;
+}
+
+.sidebar li.active {
+  background-color: #e6e6ff;
+  border-left: 3px solid #4c43cd;
+  color: #4c43cd;
+  font-weight: bold;
+}
+
+/* NFT展示区 */
+.nft-gallery {
+  flex: 1;
+  padding: 1.5rem;
+}
+
+.search-bar {
+  display: flex;
+  margin-bottom: 1.5rem;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px 0 0 4px;
+}
+
+.search-bar select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  background-color: white;
+}
+
+.nft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.nft-card {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.nft-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.nft-image {
+  height: 180px;
+  background-color: #e0e0e0;
+  background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0),
+                    linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+.nft-info {
+  padding: 1rem;
+}
+
+.nft-info h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.nft-info p {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.price {
+  font-weight: bold;
+  color: #4c43cd;
+  margin-bottom: 0.5rem;
+}
+
+.nft-info button {
+  width: 100%;
+  background-color: #4c43cd;
+  color: white;
+  border: none;
+  padding: 0.5rem 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.nft-info button:hover {
+  background-color: #3832a8;
+}
+
+/* 底部信息 */
+.footer {
+  background-color: #2a2a72;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  margin-top: auto;
+}
