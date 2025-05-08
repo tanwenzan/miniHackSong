@@ -62,7 +62,7 @@ func (app *App) Initialize() error {
 	app.Controller = api.NewController(app.Repo)
 
 	// 初始化NFT路由
-	api.SetupMuxNFTRoutes(app.Router)
+	app.Controller.RegisterRoutes(app.Router)
 
 	return nil
 }

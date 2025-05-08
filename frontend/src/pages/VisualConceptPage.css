@@ -1,0 +1,23 @@
+.visual-concept-page {
+  padding: 20px;
+  text-align: center;
+}
+
+.visual-concept-page h1 {
+  color: #333;
+}
+
+.visual-concept-page p {
+  color: #666;
+  font-size: 1.2em;
+}
+
+.visual-concept-page img {
+  margin-top: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px;
+  max-width: 80%;
+  height: auto;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}

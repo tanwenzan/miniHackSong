@@ -25,15 +25,15 @@ func (r *Repository) SaveNFT(nft *NFT) error {
 	if existingNFT == nil {
 		// 插入新NFT记录
 		query := `INSERT INTO nfts 
-			(contract_address, token_id, owner_address, metadata_uri, name, description, image_url) 
-			VALUES (?, ?, ?, ?, ?, ?, ?)`
+			(contract_address, token_id, owner_address, metadata_uri, name, description, image_url, price) 
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 		_, err = r.DB.Exec(query,
 			nft.ContractAddress, nft.TokenID, nft.OwnerAddress,
 			nft.MetadataURI, nft.Name, nft.Description, nft.ImageURL)
 	} else {
 		// 更新现有NFT记录
 		query := `UPDATE nfts SET 
-			owner_address = ?, metadata_uri = ?, name = ?, description = ?, image_url = ? 
+			owner_address = ?, metadata_uri = ?, name = ?, description = ?, image_url = ?, price = ? 
 			WHERE contract_address = ? AND token_id = ?`
 		_, err = r.DB.Exec(query,
 			nft.OwnerAddress, nft.MetadataURI, nft.Name, nft.Description, nft.ImageURL,
@@ -80,14 +80,15 @@ type ContractEvent struct {
 
 // NFT 表示NFT模型
 type NFT struct {
-	ID              int    `json:"id"`
-	ContractAddress string `json:"contract_address"`
-	TokenID         string `json:"token_id"`
-	OwnerAddress    string `json:"owner_address"`
-	MetadataURI     string `json:"metadata_uri"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	ImageURL        string `json:"image_url"`
+	ID              int     `json:"id"`
+	ContractAddress string  `json:"contract_address"`
+	TokenID         string  `json:"token_id"`
+	OwnerAddress    string  `json:"owner_address"`
+	MetadataURI     string  `json:"metadata_uri"`
+	Name            string  `json:"name"`
+	Description     string  `json:"description"`
+	ImageURL        string  `json:"image_url"`
+	Price           float64 `json:"price"`
 }
 
 // GetUserByWalletAddress 根据钱包地址获取用户
@@ -213,9 +214,27 @@ func (r *Repository) UpdateNFTOwner(tokenID string, newOwner string) error {
 	return err
 }
 
+func (r *Repository) GetNFTByID(id int) (*NFT, error) {
+	query := "SELECT id, contract_address, token_id, owner_address, metadata_uri, name, description, image_url, price FROM nfts WHERE id =?"
+	row := r.DB.QueryRow(query, id)
+	nft := &NFT{}
+	err := row.Scan(
+		&nft.ID, &nft.ContractAddress, &nft.TokenID, &nft.OwnerAddress,
+		&nft.MetadataURI, &nft.Name, &nft.Description, &nft.ImageURL,
+		&nft.Price,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return nft, nil
+}
+
 // GetNFTByTokenID 根据TokenID获取NFT记录
 func (r *Repository) GetNFTByTokenID(tokenID string) (*NFT, error) {
-	query := "SELECT id, contract_address, token_id, owner_address, metadata_uri, name, description, image_url FROM nfts WHERE token_id = ?"
+	query := "SELECT id, contract_address, token_id, owner_address, metadata_uri, name, description, image_url, price FROM nfts WHERE token_id = ?"
 	row := r.DB.QueryRow(query, tokenID)
 
 	nft := &NFT{}
@@ -235,7 +254,7 @@ func (r *Repository) GetNFTByTokenID(tokenID string) (*NFT, error) {
 
 // GetAllNFTs 获取所有NFT记录
 func (r *Repository) GetAllNFTs() ([]NFT, error) {
-	query := "SELECT id, contract_address, token_id, owner_address, metadata_uri, name, description, image_url FROM nfts ORDER BY id DESC"
+	query := "SELECT id, contract_address, token_id, owner_address, metadata_uri, name, description, image_url, price FROM nfts ORDER BY id DESC"
 	rows, err := r.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -256,6 +275,18 @@ func (r *Repository) GetAllNFTs() ([]NFT, error) {
 	}
 
 	return nfts, nil
+}
+
+func (r *Repository) CreateNFT(nft *NFT) error {
+	query := `INSERT INTO nfts
+			(contract_address, token_id, owner_address, metadata_uri, name, description, image_url, price)
+			VALUES (?,?,?,?,?,?,?,?)`
+	_, err := r.DB.Exec(query,
+		nft.ContractAddress, nft.TokenID, nft.OwnerAddress,
+		nft.MetadataURI, nft.Name, nft.Description, nft.ImageURL,
+		nft.Price,
+	)
+	return err
 }
 
 // GetContractEvents 获取合约事件

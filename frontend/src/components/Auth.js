@@ -3,6 +3,7 @@ import { useWeb3Modal } from '@web3modal/react';
 import { useAccount } from 'wagmi';
 import { Button, Form, Input, message } from 'antd';
 import api from '../utils/api';
+import blockchainService from '../services/blockchain';
 import './Auth.css';
 
 const Auth = () => {
@@ -14,10 +15,14 @@ const Auth = () => {
   const handleConnectWallet = async () => {
     try {
       setLoading(true);
-      await open();
+      // 使用blockchain服务连接钱包，确保每次都会唤起钱包选择界面
+      // 现在blockchain服务会直接抛出具体错误，不再返回布尔值
+      await blockchainService.connectWallet();
       message.success('钱包连接成功');
     } catch (error) {
-      message.error('钱包连接失败');
+      // 显示具体的错误信息，而不是通用错误
+      message.error(error.message || '钱包连接失败');
+      console.error('连接钱包失败:', error);
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import { ethers } from 'ethers';
 
 // 导入服务
 import { getBackendData } from './services/api';
+import blockchainService from './services/blockchain';
 
 // 导入页面组件
 import HomePage from './pages/Home';
@@ -12,6 +13,7 @@ import NFTMarketplace from './pages/NFTMarketplace';
 import MyNFTs from './pages/MyNFTs';
 import Profile from './pages/Profile';
 import NFTPrototype from './pages/NFTPrototype';
+import VisualConceptPage from './pages/VisualConceptPage';
 
 function App() {
   const [backendData, setBackendData] = useState(null);
@@ -21,7 +23,7 @@ function App() {
   const [error, setError] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   
-  // 从后端获取数据
+  // 从后端获取数据并初始化区块链服务
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -29,37 +31,45 @@ function App() {
         const data = await getBackendData();
         setBackendData(data);
         setError('');
+        
+        // 初始化区块链服务
+        await blockchainService.init();
       } catch (err) {
-        console.error('获取后端数据失败:', err);
-        setError('无法连接到后端服务');
+        console.error('获取后端数据或初始化区块链服务失败:', err);
+        setError('无法连接到后端服务或初始化区块链');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
+    
+    // 确保用户断开连接后不会自动重连
+    // 清除任何可能存在的钱包连接状态
+    setWalletConnected(false);
+    setAccount('');
   }, []);
 
   // 连接到MetaMask钱包
   const connectWallet = async () => {
     try {
-      if (!window.ethereum) {
-        setError('请安装MetaMask!');
-        return;
-      }
-
       setLoading(true);
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      const signer = provider.getSigner();
-      const address = await signer.getAddress();
       
+      // 使用blockchain服务连接钱包，确保每次都会唤起钱包选择界面
+      // 现在blockchain服务会直接抛出具体错误，不再返回布尔值
+      await blockchainService.connectWallet();
+      
+      // 如果连接成功，获取当前账户地址
+      const address = blockchainService.getCurrentAccount();
       setAccount(address);
       setWalletConnected(true);
       setError('');
     } catch (err) {
       console.error('连接钱包失败:', err);
-      setError('连接钱包时出错');
+      // 显示具体的错误信息，而不是通用错误
+      setError(err.message || '连接钱包时出错');
+      setWalletConnected(false);
+      setAccount('');
     } finally {
       setLoading(false);
     }
@@ -69,6 +79,10 @@ function App() {
   const disconnectWallet = () => {
     setWalletConnected(false);
     setAccount('');
+    
+    // 确保断开连接后清除任何可能导致自动重连的状态
+    // 这里不存储任何钱包连接信息，确保用户需要手动重新连接
+    console.log('钱包已断开连接，需要手动重新连接');
   };
 
   // 导航链接组件
@@ -235,6 +249,7 @@ function App() {
               <Route path="/my-nfts" element={<MyNFTs />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/prototype" element={<NFTPrototype />} />
+              <Route path="/visual-concept" element={<VisualConceptPage />} />
             </Routes>
           </div>
         </main>

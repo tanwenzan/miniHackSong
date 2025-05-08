@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gorilla/mux"
+	"github.com/zeroable/miniHackSong/backend/internal/database"
 )
 
 type NFTMetadata struct {
-	ID          uint   `json:"id"`
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Price       string `json:"price"`
@@ -18,137 +18,93 @@ type NFTMetadata struct {
 	ImageURL    string `json:"image_url"`
 }
 
-func SetupNFTRoutes(r *gin.Engine) {
-	nftGroup := r.Group("/api/nft")
-	{
-		nftGroup.GET("/metadata/:id", getNFTMetadata)
-		nftGroup.POST("/metadata", createNFTMetadata)
-		nftGroup.GET("/marketplace", listNFTsForMarketplace)
-	}
+// NFTHandler 处理用户相关请求
+type NFTHandler struct {
+	Repo *database.Repository
 }
 
-func SetupMuxNFTRoutes(r *mux.Router) {
-	nftRouter := r.PathPrefix("/api/nft").Subrouter()
-	nftRouter.HandleFunc("/metadata/{id}", getNFTMetadataForMux).Methods("GET")
-	nftRouter.HandleFunc("/metadata", createNFTMetadataForMux).Methods("POST")
-	nftRouter.HandleFunc("/marketplace", listNFTsForMarketplaceForMux).Methods("GET")
+// NewNFTHandler 创建新的交易处理器
+func NewNFTHandler(repo *database.Repository) *NFTHandler {
+	return &NFTHandler{Repo: repo}
 }
 
-func getNFTMetadata(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+func (h *NFTHandler) GetNFTs(w http.ResponseWriter, r *http.Request) {
+	nfts, err := h.Repo.GetAllNFTs()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid NFT ID"})
+		http.Error(w, "获取NFTs失败", http.StatusInternalServerError)
 		return
 	}
-
-	// TODO: 从数据库获取NFT元数据
-	metadata := NFTMetadata{
-		ID:          uint(id),
-		Name:        "Sample Skill",
-		Description: "This is a sample skill NFT",
-		Price:       "0.1",
-		Owner:       "0x123...",
-		ImageURL:    "https://example.com/skill.png",
+	var nftMetadataList []NFTMetadata
+	for _, nft := range nfts {
+		nftMetadata := NFTMetadata{
+			ID:          nft.ID,
+			Name:        nft.Name,
+			Description: nft.Description,
+			Price:       ToPriceString(nft.Price),
+			Owner:       nft.OwnerAddress,
+			ImageURL:    nft.ImageURL,
+		}
+		nftMetadataList = append(nftMetadataList, nftMetadata)
 	}
-
-	c.JSON(http.StatusOK, metadata)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(nftMetadataList)
 }
 
-func createNFTMetadata(c *gin.Context) {
-	var metadata NFTMetadata
-	if err := c.ShouldBindJSON(&metadata); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// TODO: 保存到数据库
-	c.JSON(http.StatusCreated, metadata)
-}
-
-func getNFTMetadataForMux(w http.ResponseWriter, r *http.Request) {
+func (h *NFTHandler) GetNFTDetail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	idStr := vars["id"]
-	id, err := strconv.Atoi(idStr)
+	nftID := vars["nftID"]
+	nft, err := h.Repo.GetNFTByID(strToInt(nftID))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error":"Invalid NFT ID"}`))
+		http.Error(w, "获取NFT详情失败", http.StatusInternalServerError)
 		return
 	}
-
-	metadata := NFTMetadata{
-		ID:          uint(id),
-		Name:        "Sample Skill",
-		Description: "This is a sample skill NFT",
-		Price:       "0.1",
-		Owner:       "0x123...",
-		ImageURL:    "https://example.com/skill.png",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(metadata)
-}
-
-func createNFTMetadataForMux(w http.ResponseWriter, r *http.Request) {
-	var metadata NFTMetadata
-	if err := json.NewDecoder(r.Body).Decode(&metadata); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error":"` + err.Error() + `"}`))
+	if nft == nil {
+		http.Error(w, "NFT不存在", http.StatusNotFound)
 		return
 	}
-
+	nftMetadata := NFTMetadata{
+		ID:          nft.ID,
+		Name:        nft.Name,
+		Description: nft.Description,
+		Price:       ToPriceString(nft.Price),
+		Owner:       nft.OwnerAddress,
+		ImageURL:    nft.ImageURL,
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(metadata)
+	json.NewEncoder(w).Encode(nftMetadata)
 }
 
-func listNFTsForMarketplaceForMux(w http.ResponseWriter, r *http.Request) {
-	nfts := []NFTMetadata{
-		{
-			ID:          1,
-			Name:        "Web Development",
-			Description: "Expert in React and Node.js",
-			Price:       "0.5",
-			Owner:       "0x456...",
-			ImageURL:    "https://example.com/webdev.png",
-		},
-		{
-			ID:          2,
-			Name:        "Graphic Design",
-			Description: "Professional logo and branding",
-			Price:       "0.3",
-			Owner:       "0x789...",
-			ImageURL:    "https://example.com/design.png",
-		},
+func (h *NFTHandler) SaveNFTMetadata(w http.ResponseWriter, r *http.Request) {
+	var nftMetadata NFTMetadata
+	err := json.NewDecoder(r.Body).Decode(&nftMetadata)
+	if err != nil {
+		http.Error(w, "无效的请求数据", http.StatusBadRequest)
+		return
 	}
-
+	nft := &database.NFT{
+		Name:         nftMetadata.Name,
+		Description:  nftMetadata.Description,
+		Price:        parsePrice(nftMetadata.Price),
+		OwnerAddress: nftMetadata.Owner,
+		ImageURL:     nftMetadata.ImageURL,
+	}
+	err = h.Repo.CreateNFT(nft)
+	if err != nil {
+		http.Error(w, "保存NFT失败", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(nfts)
+	json.NewEncoder(w).Encode(map[string]string{"message": "NFT保存成功"})
 }
 
-func listNFTsForMarketplace(c *gin.Context) {
-	_ = c.Query("search")
-	_ = c.Query("category")
-
-	// TODO: 根据搜索词和分类从数据库获取市场列表
-	nfts := []NFTMetadata{
-		{
-			ID:          1,
-			Name:        "Web Development",
-			Description: "Expert in React and Node.js",
-			Price:       "0.5",
-			Owner:       "0x456...",
-			ImageURL:    "https://example.com/webdev.png",
-		},
-		{
-			ID:          2,
-			Name:        "Graphic Design",
-			Description: "Professional logo and branding",
-			Price:       "0.3",
-			Owner:       "0x789...",
-			ImageURL:    "https://example.com/design.png",
-		},
+func strToInt(s string) int {
+	num, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
 	}
+	return num
+}
 
-	c.JSON(http.StatusOK, nfts)
+func ToPriceString(f float64) string {
+	return strconv.FormatFloat(f, 'f', -1, 64)
 }

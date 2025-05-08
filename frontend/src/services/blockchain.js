@@ -39,21 +39,19 @@ class BlockchainService {
     // 检查是否有现代dapp浏览器
     if (window.ethereum) {
       try {
-        // 请求用户授权
+        // 初始化Web3但不自动请求账户授权
         this.web3 = new Web3(window.ethereum);
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
         
-        // 获取连接的账户
-        this.accounts = await this.web3.eth.getAccounts();
-        
-        // 获取当前网络ID
-        this.networkId = await this.web3.eth.net.getId();
-        
-        this.connected = true;
+        // 不再自动请求账户授权，需要用户手动触发连接
+        // 仅设置事件监听器
         
         // 监听账户变化
         window.ethereum.on('accountsChanged', (accounts) => {
           this.accounts = accounts;
+          // 如果账户数组为空，表示用户断开了连接
+          if (accounts.length === 0) {
+            this.connected = false;
+          }
           // 触发账户变化事件
           window.dispatchEvent(new CustomEvent('accountsChanged', { detail: accounts }));
         });
@@ -64,18 +62,17 @@ class BlockchainService {
           window.location.reload();
         });
         
+        // 初始化时不自动连接，返回true表示初始化成功，但未连接
         return true;
       } catch (error) {
-        console.error('用户拒绝了连接请求', error);
+        console.error('初始化Web3失败', error);
         return false;
       }
-    } 
+    }
     // 检查是否有旧版Web3
     else if (window.web3) {
       this.web3 = new Web3(window.web3.currentProvider);
-      this.accounts = await this.web3.eth.getAccounts();
-      this.networkId = await this.web3.eth.net.getId();
-      this.connected = true;
+      // 不自动获取账户
       return true;
     } 
     // 如果没有注入的web3实例，回退到使用本地节点
@@ -84,6 +81,51 @@ class BlockchainService {
       const provider = new Web3.providers.HttpProvider(DEFAULT_NETWORK.rpcUrl);
       this.web3 = new Web3(provider);
       return false;
+    }
+  }
+
+  /**
+   * 手动连接钱包
+   * @returns {Promise<boolean>} 连接是否成功
+   */
+  async connectWallet() {
+    if (!this.web3) {
+      console.error('Web3未初始化');
+      throw new Error('Web3未初始化，请刷新页面重试');
+    }
+    
+    if (!window.ethereum) {
+      console.error('未检测到以太坊浏览器插件');
+      throw new Error('未检测到以太坊浏览器插件，请安装MetaMask');
+    }
+    
+    try {
+      // 强制请求用户授权，确保每次都会显示钱包选择界面
+      // 使用eth_requestAccounts方法，并设置特定参数强制显示UI
+      await window.ethereum.request({
+        method: 'eth_requestAccounts',
+        params: [{
+          eth_accounts: {}
+        }]
+      });
+      
+      // 获取连接的账户
+      this.accounts = await this.web3.eth.getAccounts();
+      
+      if (!this.accounts || this.accounts.length === 0) {
+        console.error('未能获取钱包账户');
+        throw new Error('未能获取钱包账户，请确保MetaMask已解锁');
+      }
+      
+      // 获取当前网络ID
+      this.networkId = await this.web3.eth.net.getId();
+      
+      this.connected = true;
+      return true;
+    } catch (error) {
+      console.error('连接钱包失败:', error);
+      // 将错误向上传递，而不是仅返回false
+      throw error;
     }
   }
 

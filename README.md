@@ -92,14 +92,14 @@ go run cmd/main.go
 
 ```bash
 cd frontend
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 ### 智能合约
 
 ```bash
 cd contracts
-npm install
+pnpm install
 npx hardhat compile
 ```

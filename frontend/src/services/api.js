@@ -9,6 +9,43 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 5000, // 设置超时时间为5秒
+  // 请求重试配置
+  retry: 3, // 最大重试次数
+  retryDelay: 1000, // 重试间隔时间
+});
+
+// 添加请求重试拦截器
+apiClient.interceptors.response.use(null, async (error) => {
+  const config = error.config;
+  
+  // 如果配置了重试，且请求失败是由于网络错误或超时导致的
+  if (config.retry && (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED')) {
+    config.retryCount = config.retryCount || 0;
+    
+    // 如果当前重试次数小于最大重试次数
+    if (config.retryCount < config.retry) {
+      config.retryCount += 1;
+      console.log(`请求重试中... 第${config.retryCount}次重试`);
+      
+      // 延迟重试
+      await new Promise(resolve => setTimeout(resolve, config.retryDelay));
+      return apiClient(config);
+    }
+  }
+  
+  // 处理不同类型的错误
+  let errorMessage = '未知错误';
+  if (error.code === 'ERR_NETWORK') {
+    errorMessage = '网络连接失败，请检查您的网络连接';
+  } else if (error.code === 'ECONNABORTED') {
+    errorMessage = '请求超时，请稍后重试';
+  } else if (error.response) {
+    errorMessage = `服务器错误: ${error.response.status}`;
+  }
+  
+  error.message = errorMessage;
+  return Promise.reject(error);
 });
 
 /**

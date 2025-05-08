@@ -50,6 +50,23 @@ CREATE TABLE IF NOT EXISTS contract_events (
   INDEX idx_block_number (block_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- NFT表
+CREATE TABLE IF NOT EXISTS nfts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  contract_address VARCHAR(42) NOT NULL,
+  token_id VARCHAR(255) NOT NULL,
+  owner_address VARCHAR(42) NOT NULL,
+  metadata_uri TEXT,
+  name VARCHAR(255),
+  description TEXT,
+  image_url TEXT,
+  price DECIMAL(36, 18),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY idx_contract_token (contract_address, token_id),
+  INDEX idx_owner (owner_address)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 插入一些测试数据
 INSERT INTO users (wallet_address, username, email) VALUES
 ('0x1234567890123456789012345678901234567890', '测试用户1', 'test1@example.com'),
